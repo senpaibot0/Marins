@@ -185,3 +185,5 @@ WHERE dbid = DB_ID('GeoBD');
 
 select * from AnimalLocation
 select * from Animal
+select * from Adoption 
+select * from Particulier

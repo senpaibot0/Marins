@@ -16,8 +16,11 @@ You will be able to:
 
 * **Create des Animaux Marins** (_implemented_). 
 * **Lire les donnes sur leurs loactiosations** (_implemented_). 
-* **Fluch la table AnimalLoaction** (not implemented). 
+* **Fluch la table AnimalLoaction** (implemented). 
 * **Delete des Animaux selon leur ID** (_not implemented_). 
+* **Ajouter Adoptiion par un particulier** (_not implemented_). 
+* **Reajuster le code sql + requetes(10)** (_not implemented_). 
+* **generer Animaux, Generer Les prorpio, Generer les Sante de lamimal, cree adoption, cree climat, modification **  
 """
 
 app = FastAPI( title="Generate Data and Send to Ms SQL",
@@ -50,6 +53,48 @@ def generate_random_time():
 #     statutAdoption: int
 
 
+
+@app.patch('/CreationClimat/') #climat
+async def create_animal(espece: str = Form(...), nom: str = Form(...), statutAdoption: int = Form(...)):
+    try:
+        cnxn = getConnexion()
+        cursor = cnxn.cursor()
+
+        insert_query = ''' INSERT INTO Climat (Espece, Nom, statutAdoption) 
+            VALUES (?, ?, ?)
+            '''
+        cursor.execute(insert_query, (espece, nom, statutAdoption))
+        cnxn.commit()
+        message = f"L'animal {nom} a bien été créé !"
+    except Exception as e:
+        cnxn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        cnxn.close()
+    return {"message": message} 
+
+@app.patch('/CreationParticulier/')# proprio
+async def create_Particulier(Type: str = Form(...), nom: str = Form(...), Contact: str = Form(...)):
+    try:
+        cnxn = getConnexion()
+        cursor = cnxn.cursor()
+
+        insert_query = ''' INSERT INTO Particulier (Type, nom, Contact) 
+            VALUES (?, ?, ?)
+            '''
+        cursor.execute(insert_query, (Type, nom, Contact))
+        cnxn.commit()
+        
+        message = f"Le Particulier {nom} a bien été créé !"
+    except Exception as e:
+        cnxn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        cnxn.close()
+    return {"message": message}
+
 @app.patch('/CreationAnimal/')
 async def create_animal(espece: str = Form(...), nom: str = Form(...), statutAdoption: int = Form(...)):
     try:
@@ -69,6 +114,9 @@ async def create_animal(espece: str = Form(...), nom: str = Form(...), statutAdo
         cursor.close()
         cnxn.close()
     return {"message": message}
+
+
+
 
 
 # class CoordinateData(BaseModel):
