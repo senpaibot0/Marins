@@ -5,6 +5,12 @@ from datetime import datetime, timedelta
 from dbCon import getConnexion
 from fastapi import FastAPI, HTTPException, Path, Form
 from pydantic import BaseModel
+from AnimalDao import AnimalDAO
+from ParticulierDAO import ParticulierDAO
+from AdoptionDAO import AdoptionDAO
+from AnimalLocationDAO import AnimalLocationDAO
+from ClimatDAO import ClimatDAO
+from LocationsDAO import LocationsDAO
 
 
 description = """
@@ -47,188 +53,103 @@ def generate_random_time():
 
 
 
-# class Animal(BaseModel):
-#     espesce: str
-#     nom: str
-#     statutAdoption: int
+class Animal(BaseModel):
+    espesce: str
+    nom: str
+    statutAdoption: int
 
 
 
-@app.patch('/CreationClimat/') #climat
-async def create_animal(espece: str = Form(...), nom: str = Form(...), statutAdoption: int = Form(...)):
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
+class CoordinateData(BaseModel):
+    nombre_de_coordonnees: int
 
-        insert_query = ''' INSERT INTO Climat (Espece, Nom, statutAdoption) 
-            VALUES (?, ?, ?)
-            '''
-        cursor.execute(insert_query, (espece, nom, statutAdoption))
-        cnxn.commit()
-        message = f"L'animal {nom} a bien été créé !"
-    except Exception as e:
-        cnxn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        cnxn.close()
-    return {"message": message} 
+    
+# CRUD Operations for Animal
+@app.post("/animal/")
+async def add_animal(espece: str = Form(...), nom: str = Form(...), statutAdoption: int = Form(...)):
+    return AnimalDAO.create_animal(espece, nom, statutAdoption)
 
-@app.patch('/CreationParticulier/')# proprio
-async def create_Particulier(Type: str = Form(...), nom: str = Form(...), Contact: str = Form(...)):
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
+@app.get("/animal/{animal_id}")
+async def get_animal(animal_id: int):
+    animal = AnimalDAO.get_animal_by_id(animal_id)
+    if animal:
+        return animal
+    raise HTTPException(status_code=404, detail="Animal not found")
 
-        insert_query = ''' INSERT INTO Particulier (Type, nom, Contact) 
-            VALUES (?, ?, ?)
-            '''
-        cursor.execute(insert_query, (Type, nom, Contact))
-        cnxn.commit()
-        
-        message = f"Le Particulier {nom} a bien été créé !"
-    except Exception as e:
-        cnxn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        cnxn.close()
-    return {"message": message}
+@app.get("/animals/")
+async def get_all_animals():
+    return AnimalDAO.get_all_animals()
 
-@app.patch('/CreationAnimal/')
-async def create_animal(espece: str = Form(...), nom: str = Form(...), statutAdoption: int = Form(...)):
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
+@app.delete("/animal/{animal_id}")
+async def delete_animal(animal_id: int):
+    return AnimalDAO.delete_animal(animal_id)
 
-        insert_query = ''' INSERT INTO Animal (Espece, Nom, statutAdoption) 
-            VALUES (?, ?, ?)
-            '''
-        cursor.execute(insert_query, (espece, nom, statutAdoption))
-        cnxn.commit()
-        message = f"L'animal {nom} a bien été créé !"
-    except Exception as e:
-        cnxn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        cnxn.close()
-    return {"message": message}
+# CRUD Operations for Particulier
+@app.post("/particulier/")
+async def create_particulier(type_particulier: str = Form(...), nom: str = Form(...), contact: str = Form(...)):
+    return ParticulierDAO.create_particulier(type_particulier, nom, contact)
 
+@app.get("/particulier/{particulier_id}")
+async def get_particulier(particulier_id: int):
+    return ParticulierDAO.get_particulier_by_id(particulier_id)
 
+@app.get("/particuliers/")
+async def get_all_particuliers():
+    return ParticulierDAO.get_all_particuliers()
 
+# CRUD Operations for Adoption
+@app.post("/adoption/")
+async def add_adoption(id_animal: int = Form(...), id_particulier: int = Form(...), date_adoption: str = Form(...), interet: str = Form(...)):
+    return AdoptionDAO.create_adoption(id_animal, id_particulier, date_adoption, interet)
 
+@app.get("/adoption/{adoption_id}")
+async def get_adoption(adoption_id: int):
+    return AdoptionDAO.get_adoption_by_id(adoption_id)
 
-# class CoordinateData(BaseModel):
-#     nombre_de_coordonnees: int
+@app.get("/adoptions/")
+async def get_all_adoptions():
+    return AdoptionDAO.get_all_adoptions()
 
-@app.post("/generate-data/}")
-async def generate_data_api(nombre : int):
-    generate_data(nombre)
-    return {"message": "Data generated successfully."}
+# CRUD Operations for AnimalLocation
+@app.post("/animal_location/")
+async def add_animal_location(id_animal: int, id_location: int, date_enregistrement: str, temps_enregistrement: str, latitude: float, longitude: float):
+    # Assuming date and time conversion is handled appropriately
+    return AnimalLocationDAO.create_animal_location(id_animal, id_location, date_enregistrement, temps_enregistrement, latitude, longitude)
 
-def generate_data(nombre_de_coordonnees):
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
+@app.get("/animal_locations/")
+async def get_all_locations():
+    return AnimalLocationDAO.get_all_animal_locations()
 
-        id_animal = []
-        cursor.execute("SELECT IDAnimal FROM Animal")
-        rows = cursor.fetchall()
-        for row in rows:
-            id_animal.append(row[0])
+# Flush Animal Locations (for simplicity)
+@app.delete("/animal_locations/flush/")
+async def flush_locations():
+    return AnimalLocationDAO.flush_locations()
 
-        id_location = []
-        cursor.execute("SELECT IDLocation FROM Locations")
-        rows = cursor.fetchall()
-        for row in rows:
-            id_location.append(row[0])
+# CRUD Operations for Climat
+@app.post("/climat/")
+async def create_climat(temperature: float = Form(...), vent: float = Form(...), courant: float = Form(...)):
+    return ClimatDAO.create_climat(temperature, vent, courant)
 
-        for i in range(nombre_de_coordonnees):
-            random_animal_id = random.choice(id_animal)
-            random_location_id = random.choice(id_location)
-            random_date = datetime.today().date()
-            random_time = generate_random_time()
-            random_latitude = generate_latitude(i)
-            random_longitude = generate_longitude(i)
+@app.get("/climat/{climat_id}")
+async def get_climat(climat_id: int):
+    return ClimatDAO.get_climat_by_id(climat_id)
 
-            insert_query = ''' INSERT INTO AnimalLocation (IDAnimal, IDLocation, DateEnregistrement, TempsEnregistrement, latitude, longitude) 
-            VALUES (?, ?, ?, ?, ?, ?)
-            '''
-            cursor.execute(insert_query, (random_animal_id, random_location_id, random_date, random_time, random_latitude, random_longitude))
-            cnxn.commit()
+@app.get("/climats/")
+async def get_all_climats():
+    return ClimatDAO.get_all_climats()
 
-    except Exception as e:
-        cnxn.rollback()
-        raise e
-    finally:
-        cursor.close()
-        cnxn.close()
+# CRUD Operations for Locations
+@app.post("/location/")
+async def create_location(id_climat: int = Form(...), habitat: str = Form(...), latitude: float = Form(...), longitude: float = Form(...)):
+    return LocationsDAO.create_location(id_climat, habitat, latitude, longitude)
 
-    return {"message": f"La génération des {nombre_de_coordonnees} données a bien été faite !"}
+@app.get("/location/{location_id}")
+async def get_location(location_id: int):
+    return LocationsDAO.get_location_by_id(location_id)
 
-
-
-
-@app.get("/GetAnimalLocations/")
-async def Get_Animal_Locations():
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
-
-        animalLocs = []
-        cursor.execute("SELECT IDAnimal, IDLocation, DateEnregistrement, TempsEnregistrement, latitude, longitude  FROM AnimalLocation")
-        rows = cursor.fetchall()
-        for row in rows:
-            animalLocs.append(f'IDAnimal: {row[0]}, IDLocation: {row[1]}, DateEnregistrement: {row[2]}, TempsEnregistrement: {row[3]}, latitude: {row[4]}, longitude: {row[5]}' )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        cnxn.close()
-    return animalLocs
-
-@app.delete("/FlushAnimalLocations/")
-async def Flush_Animal_Locs():
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
-        
-        cursor.execute("DROP TABLE IF EXISTS AnimalLocation")
-        cnxn.commit()
-        message = "Tous a bien été supprimé de Animal Location."
-    except Exception as e:
-        cnxn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        cnxn.close()
-    return {'message': message}
-
-
-@app.delete("/FlushAnimal/{Animal_id}") # ici il manque de faire de quoi avec la forigh key de Sante de lanimal
-async def delete_animal(Animal_id: int):
-    try:
-        cnxn = getConnexion()
-        cursor = cnxn.cursor()
-
-        delete_query = "DELETE FROM Animal WHERE IDAnimal = ?"
-        cursor.execute(delete_query, (Animal_id,))
-        cnxn.commit()
-
-        if cursor.rowcount == 0:
-            return {'message': "Aucun Animal touver avec cet ID"}
-        else:
-            return {'message': "Animal Bien Supprimer !"}
-
-    except Exception as e:
-        cnxn.rollback()  
-        raise HTTPException(status_code=500, detail=str(e))
-
-    finally:
-        cursor.close()
-        cnxn.close()
+@app.get("/locations/")
+async def get_all_locations():
+    return LocationsDAO.get_all_locations()
 
 
 if __name__ == '__main__':
