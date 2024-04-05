@@ -1,5 +1,27 @@
 from dbCon import getConnexion
 from datetime import datetime
+import random
+import math
+from datetime import datetime, timedelta
+from dbCon import getConnexion
+
+def generate_longitude(index):
+    return math.cos(index / 10) * 180
+
+def generate_latitude(index):
+    return math.sin(index / 10) * 90
+
+def generate_random_time(debut: datetime, fin  :datetime ):
+    start_time = datetime(debut)  # Début de l'année 2023
+    end_time = datetime(fin)  # Fin de l'année 2024
+    # Calculer la différence totale de secondes entre start_time et end_time
+    difference = end_time - start_time
+    difference_in_seconds = difference.total_seconds()
+    # Générer un nombre aléatoire de secondes à ajouter à start_time
+    random_seconds = random.randint(0, int(difference_in_seconds))
+    # Calculer le nouveau timestamp aléatoire
+    random_timestamp = start_time + timedelta(seconds=random_seconds)
+    return random_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')
 
 class AnimalLocationDAO:
     @staticmethod
@@ -69,4 +91,49 @@ class AnimalLocationDAO:
             cursor.execute("TRUNCATE TABLE AnimalLocation")
             cnxn.commit()
         return "AnimalLocation table flushed."
+
+    
+
+    @staticmethod
+    def generate_data(nombre_de_coordonnees:int):
+        try:
+            cnxn = getConnexion()
+            cursor = cnxn.cursor()
+
+            id_animal = []
+            cursor.execute("SELECT IDAnimal FROM Animal")
+            rows = cursor.fetchall()
+            for row in rows:
+                id_animal.append(row[0])
+
+            id_location = []
+            cursor.execute("SELECT IDLocation FROM Locations")
+            rows = cursor.fetchall()
+            for row in rows:
+                id_location.append(row[0])
+
+            for i in range(nombre_de_coordonnees):
+                random_animal_id = random.choice(id_animal)
+                random_location_id = random.choice(id_location)
+                random_date = datetime.today().date()
+                random_time = generate_random_time()
+                random_latitude = generate_latitude(i)
+                random_longitude = generate_longitude(i)
+
+                insert_query = ''' INSERT INTO AnimalLocation (IDAnimal, IDLocation, DateEnregistrement, TempsEnregistrement, latitude, longitude) 
+                VALUES (?, ?, ?, ?, ?, ?)
+                '''
+                cursor.execute(insert_query, (random_animal_id, random_location_id, random_date, random_time, random_latitude, random_longitude))
+                cnxn.commit()
+
+        except Exception as e:
+            cnxn.rollback()
+            raise e
+        finally:
+            cursor.close()
+            cnxn.close()
+
+        return {"message": f"La génération des {nombre_de_coordonnees} données a bien été faite !"}
+
+
 
