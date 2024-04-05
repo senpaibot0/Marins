@@ -2,7 +2,7 @@ from dbCon import getConnexion
 
 class AnimalDAO:
     @staticmethod
-    def create_animal(espece: str, nom: str, statutAdoption: int):
+    def create_animal(espece: str, nom: str, statutAdoption: bool):
         cnxn = getConnexion()
         with cnxn.cursor() as cursor:
             cursor.execute("INSERT INTO Animal (Espece, Nom, StatutAdoption) VALUES (?, ?, ?)", (espece, nom, statutAdoption))
@@ -23,13 +23,23 @@ class AnimalDAO:
     @staticmethod
     def get_All_animals():
         cnxn = getConnexion()
+        animals = []  
         with cnxn.cursor() as cursor:
             cursor.execute("SELECT * FROM Animal")
             result = cursor.fetchall()
             if result:
-                return {"IDAnimal": result[0], "Espece": result[1], "Nom": result[2], "StatutAdoption": result[3]}
+                for row in result:
+                    animal_dict = {
+                        "IDAnimal": row[0], 
+                        "Espece": row[1], 
+                        "Nom": row[2], 
+                        "StatutAdoption": row[3]
+                    }
+                    animals.append(animal_dict)
+                return animals  # Return the list of dictionaries
             else:
-                return None
+                return "erreur lors du get All"
+
 
     @staticmethod
     def delete_animal(animal_id: int):
